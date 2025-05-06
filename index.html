@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payday Tracker</title>
+  <style>
+    :root {
+      --bg-color: #0f0f0f; /* Darker background */
+      --text-color: #f0f0f0;
+      --card-bg: #1e1e1e;
+      --payday-bg: #81c784;
+      --input-bg: #2a2a2a;
+      --btn-bg: #388e3c;
+      --btn-text: #fff;
+      --modal-bg: #252525; /* Same as modal background */
+      --required-color: #ff0000; /* Color for required field indicator */
+      --calendar-day-bg: #2a2a2a; /* Dark background for calendar days */
+      --calendar-day-hover-bg: #444; /* Hover background */
+      --payday-color: #ff9800; /* Color for payday */
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 2rem;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .tracker {
+      background: var(--card-bg);
+      padding: 0.75rem;
+      border-radius: 10px;
+      margin: 1rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      flex: 1 1 300px;
+      max-width: 300px;
+      display: flex;
+      flex-direction: column;
+      height: 400px;
+    }
+    .tracker-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      margin: 0.2rem 0;
+      overflow-y: auto;
+      padding: 0.1rem;
+      flex: 1;
+    }
+    .tracker-content h3 {
+      margin: 0.2rem 0;
+    }
+    .tracker-content p,
+    .tracker-content div {
+      margin: 0.1rem 0;
+    }
+    .tracker h3 {
+      text-align: center;
+    }
+    input, select, button, textarea {
+      margin: 0.3rem 0;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: var(--input-bg);
+      color: var(--text-color);
+    }
+    label {
+      display: block;
+      margin-top: 0.5rem;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.05rem;
+      margin: 0.3rem 0 0 0;
+      width: 100%;
+    }
+    .calendar-day {
+      width: 1.8rem;
+      height: 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--calendar-day-bg);
+      border-radius: 3px;
+      color: var(--text-color);
+      transition: background 0.3s;
+      font-size: 0.75rem;
+      visibility: visible;
+    }
+    .calendar-day.empty {
+      background: transparent;
+      visibility: hidden;
+    }
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 0.1rem;
+      width: 100%;
+    }
+    .calendar-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.2rem;
+      width: 100%;
+    }
+    .calendar-month {
+      flex-grow: 1;
+      text-align: center;
+      font-weight: bold;
+    }
+    .calendar-day.payday {
+      background: var(--payday-color);
+      color: white;
+      font-weight: bold;
+    }
+    .layout-container {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 2rem;
+      justify-content: flex-start;
+    }
+    .form-group {
+      background: var(--modal-bg);
+      padding: 1.2rem 1rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 320px;
+      min-width: 320px;
+      max-width: 320px;
+      min-height: 200px;
+      position: sticky;
+      top: 2rem;
+      left: 0;
+      z-index: 10;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .form-group button {
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      cursor: pointer;
+    }
+    .edit-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--modal-bg);
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      z-index: 1000;
+    }
+    .edit-modal input, .edit-modal select {
+      width: 100%;
+    }
+    .edit-modal-close {
+      float: right;
+      cursor: pointer;
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+    #trackers {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      flex: 2;
+    }
+    .button-container {
+      display: flex;
+      justify-content: space-evenly;
+      margin-top: auto;
+    }
+    .calendar-container {
+      margin-top: 0.3rem;
+      width: 100%;
+      position: relative;
+    }
+    .calendar-controls {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.3rem;
+      align-items: center;
+    }
+    .calendar-controls button {
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .calendar-controls button:hover {
+      background: darken(var(--btn-bg), 10%);
+    }
+    .calendar-month {
+      font-weight: bold;
+      text-align: center;
+      flex-grow: 1;
+      margin-bottom: 0.2rem;
+    }
+    @media (max-width: 768px) {
+      .layout-container {
+        flex-direction: column;
+      }
+      #trackers {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Payday Tracker</h1>
+
+  <div class="layout-container">
+    <div class="form-group">
+      <h2>Add New Tracker</h2>
+      <form id="newTrackerForm">
+        <label>Title: <span style="color: var(--required-color);">*</span> <input type="text" id="title" required></label>
+        <label>Start Date: <span style="color: var(--required-color);">*</span> <input type="date" id="startDate" required></label>
+        <label>End Date: <span style="color: var(--required-color);">*</span> <input type="date" id="endDate" required></label>
+        <label>Frequency: <span style="color: var(--required-color);">*</span>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="number" id="frequencyValue" min="1" required style="width: 4em;">
+            <select id="frequencyUnit">
+              <option value="days">Days</option>
+              <option value="weeks">Weeks</option>
+              <option value="months">Months</option>
+            </select>
+          </div>
+        </label>
+        <label>Amount Earned Per Payday: <input type="number" id="amountEarned" min="0"></label>
+        <label>Savings Per Payday: <input type="number" id="savingsAmount" min="0"></label>
+        <label>Start Saving On Payday #: <input type="number" id="savingsStart" min="1" value="1"></label>
+        <button type="submit">Add Tracker</button>
+      </form>
+    </div>
+
+    <div style="flex: 2;">
+      <h2>Your Trackers</h2>
+      <div id="trackers"></div>
+    </div>
+  </div>
+  <div id="editModalContainer"></div>
+
+  <script>
+    const trackersKey = 'paydayTrackers';
+
+    function getContrastColor(backgroundColor) {
+      const hex = backgroundColor.charAt(0) === '#' ? backgroundColor.slice(1) : backgroundColor;
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const luminance = 0.2126 * (r / 255) + 0.7152 * (g / 255) + 0.0722 * (b / 255);
+      return luminance < 0.5 ? '#ffffff' : '#000000';
+    }
+
+    function getFrequencyDays(value, unit) {
+      switch (unit) {
+        case 'days': return value;
+        case 'weeks': return value * 7;
+        case 'months': return value * 30;
+        default: return 7;
+      }
+    }
+
+    function calculatePaydays(start, end, value, unit) {
+      const days = getFrequencyDays(value, unit);
+      let count = 0;
+      let current = new Date(start);
+      const paydayDates = [];
+      const now = new Date();
+      let remaining = 0;
+      while (current <= end) {
+        if ((current - start) % (days * 24 * 60 * 60 * 1000) === 0) {
+          const dateCopy = new Date(current);
+          paydayDates.push(formatDateString(dateCopy));
+          if (dateCopy >= now) remaining++;
+          count++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      return { count, paydayDates, remaining };
+    }
+
+    function formatDateString(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    function renderCalendar(start, end, paydays, trackerStart, trackerEnd) {
+      // Outer container for controls + weekdays + grid
+      const outer = document.createElement('div');
+      outer.className = 'calendar-outer';
+
+      // Controls row: Prev | Month Name | Next
+      const controls = document.createElement('div');
+      controls.className = 'calendar-controls';
+
+      const prevButton = document.createElement('button');
+      prevButton.textContent = 'Prev';
+      prevButton.onclick = () => changeMonth(-1, trackerStart, trackerEnd);
+      prevButton.disabled = (start.getFullYear() === trackerStart.getFullYear() && start.getMonth() === trackerStart.getMonth());
+      controls.appendChild(prevButton);
+
+      const monthLabel = document.createElement('div');
+      monthLabel.className = 'calendar-month';
+      monthLabel.textContent = new Date(start).toLocaleString('default', { month: 'long' }) + ' ' + start.getFullYear();
+      controls.appendChild(monthLabel);
+
+      const nextButton = document.createElement('button');
+      nextButton.textContent = 'Next';
+      nextButton.onclick = () => changeMonth(1, trackerStart, trackerEnd);
+      nextButton.disabled = (start.getFullYear() === trackerEnd.getFullYear() && start.getMonth() === trackerEnd.getMonth());
+      controls.appendChild(nextButton);
+
+      outer.appendChild(controls);
+
+      // Weekday headers
+      const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const weekHeader = document.createElement('div');
+      weekHeader.className = 'calendar-weekdays';
+      weekDays.forEach(day => {
+        const w = document.createElement('div');
+        w.textContent = day;
+        weekHeader.appendChild(w);
+      });
+      outer.appendChild(weekHeader);
+
+      // Calendar grid (days)
+      const calendarGrid = document.createElement('div');
+      calendarGrid.className = 'calendar';
+      // Leading empty cells for the first week
+      const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+      const firstDayOfWeek = monthStart.getDay();
+      for (let i = 0; i < firstDayOfWeek; i++) {
+        const blank = document.createElement('div');
+        blank.className = 'calendar-day empty';
+        calendarGrid.appendChild(blank);
+      }
+      let current = new Date(monthStart);
+      while (current.getMonth() === monthStart.getMonth() && current <= trackerEnd) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day';
+        const dayStr = formatDateString(current);
+        dayDiv.textContent = current.getDate();
+        // Mark as payday for any frequency (compare directly to 'YYYY-MM-DD' strings)
+        if (paydays && paydays.includes(dayStr)) {
+          dayDiv.classList.add('payday');
+        }
+        // Hide days before tracker start or after tracker end
+        if (current < trackerStart || current > trackerEnd) {
+          dayDiv.classList.add('empty');
+        }
+        calendarGrid.appendChild(dayDiv);
+        current.setDate(current.getDate() + 1);
+      }
+      // Trailing empty cells to complete last week row (only if trackerEnd is in this month and last day is not Saturday)
+      if (trackerEnd.getFullYear() === start.getFullYear() && trackerEnd.getMonth() === start.getMonth()) {
+        const lastDayOfWeek = trackerEnd.getDay();
+        if (lastDayOfWeek < 6) {
+          const trailing = 6 - lastDayOfWeek;
+          for (let i = 0; i < trailing; i++) {
+            const blank = document.createElement('div');
+            blank.className = 'calendar-day empty';
+            calendarGrid.appendChild(blank);
+          }
+        }
+      }
+      outer.appendChild(calendarGrid);
+      return outer;
+    }
+
+    function changeMonth(offset, trackerStart, trackerEnd) {
+      const calendarContainer = event.target.closest('.calendar-container');
+      let currentMonth = new Date(calendarContainer.dataset.year, calendarContainer.dataset.month);
+      currentMonth.setMonth(currentMonth.getMonth() + offset);
+      calendarContainer.dataset.year = currentMonth.getFullYear();
+      calendarContainer.dataset.month = currentMonth.getMonth();
+
+      const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+
+      // Get paydays for this tracker
+      const trackerIndex = calendarContainer.closest('.tracker').dataset.index;
+      const trackers = loadTrackers();
+      const tracker = trackers[trackerIndex];
+      const result = calculatePaydays(new Date(tracker.start), new Date(tracker.end), tracker.frequencyValue, tracker.frequencyUnit);
+      const paydays = result.paydayDates;
+
+      calendarContainer.innerHTML = '';
+      calendarContainer.appendChild(renderCalendar(start, end, paydays, new Date(tracker.start), new Date(tracker.end)));
+    }
+
+    function saveTrackers(trackers) {
+      localStorage.setItem(trackersKey, JSON.stringify(trackers));
+    }
+
+    function loadTrackers() {
+      return JSON.parse(localStorage.getItem(trackersKey) || '[]');
+    }
+
+    function displayTrackers() {
+      const container = document.getElementById('trackers');
+      container.innerHTML = '';
+      const trackers = loadTrackers();
+
+      if (trackers.length === 0) {
+        container.textContent = 'No trackers added yet.';
+        return;
+      }
+
+      trackers.forEach((tracker, index) => {
+        const start = new Date(tracker.start);
+        const end = new Date(tracker.end);
+        const result = calculatePaydays(start, end, tracker.frequencyValue, tracker.frequencyUnit);
+
+        const totalEarned = tracker.amountEarned ? tracker.amountEarned * result.count : null;
+        const savingStartIndex = tracker.savingsStart ? tracker.savingsStart - 1 : 0;
+        const savingsCount = Math.max(0, result.count - savingStartIndex);
+        const totalSaved = tracker.savingsAmount && savingsCount > 0 ? (tracker.savingsAmount || 0) * savingsCount : null;
+
+        const card = document.createElement('div');
+        card.classList.add('tracker');
+        card.dataset.index = index;
+        card.innerHTML = `
+          <div class="tracker-content">
+            <h3>${tracker.title}</h3>
+            <p>Frequency: ${tracker.frequencyValue} ${tracker.frequencyUnit}</p>
+            ${totalEarned !== null ? `<p>Total Earned: $${totalEarned}</p>` : ''}
+            ${totalSaved !== null ? `<p>Total Saved: $${totalSaved}</p>` : ''}
+            <div>Remaining Paydays: ${result.remaining}</div>
+          </div>
+          <div class="button-container">
+            <button onclick="editTracker(${index})">Edit</button>
+            <button onclick="deleteTracker(${index})">Delete</button>
+          </div>
+          <div class="calendar-container" data-year="${start.getFullYear()}" data-month="${start.getMonth()}">
+          </div>
+        `;
+
+        // Render the calendar after card is added, to ensure DOM is ready
+        container.appendChild(card);
+        const calendarContainer = card.querySelector('.calendar-container');
+        calendarContainer.appendChild(renderCalendar(
+          new Date(start.getFullYear(), start.getMonth(), 1),
+          new Date(start.getFullYear(), start.getMonth() + 1, 0),
+          result.paydayDates,
+          start,
+          end
+        ));
+      });
+    }
+
+    function deleteTracker(index) {
+      const trackers = loadTrackers();
+      trackers.splice(index, 1);
+      saveTrackers(trackers);
+      displayTrackers();
+    }
+
+    function editTracker(index) {
+      const trackers = loadTrackers();
+      const tracker = trackers[index];
+      const modal = document.createElement('div');
+      modal.classList.add('edit-modal');
+      modal.innerHTML = `
+        <div class="edit-modal-close" onclick="closeModal()">X</div>
+        <h3>Edit Tracker</h3>
+        <form id="editForm">
+          <label>Title: <input type="text" id="editTitle" value="${tracker.title}" required></label>
+          <label>Start Date: <input type="date" id="editStartDate" value="${tracker.start}" required></label>
+          <label>End Date: <input type="date" id="editEndDate" value="${tracker.end}" required></label>
+          <label>Frequency: <input type="number" id="editFrequencyValue" value="${tracker.frequencyValue}" required></label>
+          <label>Unit: <select id="editFrequencyUnit" value="${tracker.frequencyUnit}">
+            <option value="days">Days</option>
+            <option value="weeks">Weeks</option>
+            <option value="months">Months</option>
+          </select></label>
+          <label>Amount Earned Per Payday: <input type="number" id="editAmountEarned" value="${tracker.amountEarned || ''}"></label>
+          <label>Savings Per Payday: <input type="number" id="editSavingsAmount" value="${tracker.savingsAmount}"></label>
+          <label>Start Saving On Payday #: <input type="number" id="editSavingsStart" value="${tracker.savingsStart}"></label>
+          <button type="submit">Save</button>
+        </form>
+      `;
+
+      modal.querySelector('#editForm').onsubmit = function(event) {
+        event.preventDefault();
+        tracker.title = document.getElementById('editTitle').value;
+        tracker.start = document.getElementById('editStartDate').value;
+        tracker.end = document.getElementById('editEndDate').value;
+        tracker.frequencyValue = document.getElementById('editFrequencyValue').value;
+        tracker.frequencyUnit = document.getElementById('editFrequencyUnit').value;
+        tracker.amountEarned = document.getElementById('editAmountEarned').value || ''; 
+        tracker.savingsAmount = document.getElementById('editSavingsAmount').value;
+        tracker.savingsStart = document.getElementById('editSavingsStart').value;
+
+        saveTrackers(trackers); 
+        closeModal();
+        displayTrackers(); 
+      };
+
+      const overlay = document.createElement('div');
+      overlay.classList.add('modal-overlay');
+      document.body.appendChild(overlay);
+      document.body.appendChild(modal);
+    }
+
+    function closeModal() {
+      const modal = document.querySelector('.edit-modal');
+      const overlay = document.querySelector('.modal-overlay');
+      modal.remove();
+      overlay.remove();
+    }
+
+    document.getElementById('newTrackerForm').onsubmit = function(event) {
+      event.preventDefault();
+      const title = document.getElementById('title').value;
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const frequencyValue = document.getElementById('frequencyValue').value;
+      const frequencyUnit = document.getElementById('frequencyUnit').value;
+      const amountEarned = document.getElementById('amountEarned').value;
+      const savingsAmount = document.getElementById('savingsAmount').value;
+      const savingsStart = document.getElementById('savingsStart').value;
+
+      const newTracker = {
+        title,
+        start: startDate,
+        end: endDate,
+        frequencyValue,
+        frequencyUnit,
+        amountEarned: amountEarned || '',
+        savingsAmount,
+        savingsStart,
+        color: 'default'
+      };
+
+      const trackers = loadTrackers();
+      trackers.push(newTracker);
+      saveTrackers(trackers); 
+      displayTrackers(); 
+      document.getElementById('newTrackerForm').reset();
+    };
+
+    displayTrackers();
+  </script>
+</body>
+</html>
